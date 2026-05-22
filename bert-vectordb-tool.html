@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BERT → Vector DB → Semantic Retrieval | Interactive Teaching Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a2235;
+  --bg-card-hover: #1e2a42;
+  --bg-input: #0d1424;
+  --border: #2a3a5c;
+  --border-active: #4f8aff;
+  --text-primary: #e8ecf4;
+  --text-secondary: #8a9bb8;
+  --text-dim: #5a6a88;
+  --accent-blue: #4f8aff;
+  --accent-cyan: #22d3ee;
+  --accent-green: #34d399;
+  --accent-amber: #f59e0b;
+  --accent-rose: #fb7185;
+  --accent-purple: #a78bfa;
+  --accent-orange: #fb923c;
+  --glow-blue: rgba(79, 138, 255, 0.15);
+  --glow-cyan: rgba(34, 211, 238, 0.12);
+  --glow-green: rgba(52, 211, 153, 0.12);
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'IBM Plex Sans', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-blue); }
+
+/* Header */
+.header {
+  text-align: center;
+  padding: 48px 24px 32px;
+  position: relative;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan), var(--accent-green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+.header p {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Pipeline */
+.pipeline-wrapper {
+  padding: 32px 24px;
+  overflow-x: auto;
+}
+.pipeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 900px;
+  margin: 0 auto;
+}
+.pipe-node {
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-align: center;
+  white-space: nowrap;
+  position: relative;
+}
+.pipe-node:hover {
+  border-color: var(--accent-blue);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+.pipe-node.active {
+  border-color: var(--accent-amber);
+  background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,146,60,0.08));
+  box-shadow: 0 0 20px rgba(245,158,11,0.15);
+  color: var(--accent-amber);
+}
+.pipe-arrow {
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* Main container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 60px;
+}
+
+/* Section */
+.section {
+  margin-bottom: 36px;
+  animation: fadeUp 0.4s ease;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.section-num {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #000;
+  flex-shrink: 0;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.card-dark {
+  background: var(--bg-input);
+}
+
+/* Explainer box */
+.explainer {
+  background: linear-gradient(135deg, rgba(79,138,255,0.06), rgba(34,211,238,0.04));
+  border: 1px solid rgba(79,138,255,0.2);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+.explainer strong {
+  color: var(--accent-cyan);
+}
+.explainer code {
+  background: rgba(79,138,255,0.12);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--accent-blue);
+}
+
+/* Input row */
+.input-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.input-row input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input-row input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--glow-blue);
+}
+.input-row input::placeholder { color: var(--text-dim); }
+
+button {
+  font-family: var(--font-display);
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 22px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-blue), #3b6fd4);
+  color: #fff;
+}
+.btn-primary:hover {
+  box-shadow: 0 4px 20px rgba(79,138,255,0.35);
+  transform: translateY(-1px);
+}
+.btn-secondary {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  color: var(--text-primary);
+}
+.btn-secondary:hover {
+  border-color: var(--accent-blue);
+  background: var(--bg-card-hover);
+}
+.btn-green {
+  background: linear-gradient(135deg, var(--accent-green), #20b380);
+  color: #000;
+}
+.btn-green:hover {
+  box-shadow: 0 4px 20px rgba(52,211,153,0.35);
+}
+.btn-amber {
+  background: linear-gradient(135deg, var(--accent-amber), #d97706);
+  color: #000;
+}
+.btn-amber:hover {
+  box-shadow: 0 4px 20px rgba(245,158,11,0.35);
+}
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 0.78rem;
+}
+
+/* Token display */
+.tokens-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.token-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 60px;
+  transition: all 0.2s;
+}
+.token-chip:hover {
+  border-color: var(--accent-cyan);
+  transform: translateY(-2px);
+}
+.token-text {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+.token-id {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+/* Vector display */
+.vector-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.vec-val {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  min-width: 48px;
+  text-align: center;
+}
+
+/* Matrix display */
+.matrix-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+  margin: 12px 0;
+}
+.matrix-block {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 140px;
+}
+.matrix-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.matrix-grid {
+  display: grid;
+  gap: 3px;
+}
+.matrix-cell {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 4px 6px;
+  text-align: center;
+  border-radius: 3px;
+  min-width: 40px;
+}
+
+/* Results table */
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.results-table th {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.5px;
+}
+.results-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(42,58,92,0.5);
+  vertical-align: top;
+}
+.results-table tr:hover td {
+  background: rgba(79,138,255,0.04);
+}
+
+/* Similarity bar */
+.sim-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sim-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+  transition: width 0.5s ease;
+}
+.sim-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-input);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.sim-val {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--accent-cyan);
+  min-width: 50px;
+}
+
+/* Scatter plot */
+.scatter-canvas {
+  width: 100%;
+  max-width: 600px;
+  height: 350px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 12px auto;
+  display: block;
+}
+
+/* Semantic attention */
+.attn-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+.attn-row:hover {
+  border-color: var(--accent-purple);
+}
+.attn-token {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--accent-cyan);
+  min-width: 80px;
+}
+.attn-arrow {
+  color: var(--text-dim);
+}
+.attn-match {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.attn-score {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* Math formula */
+.math {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent-purple);
+  background: rgba(167,139,250,0.08);
+  padding: 12px 18px;
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-purple);
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.tab {
+  padding: 10px 18px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: none;
+  color: var(--text-dim);
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 0;
+}
+.tab:hover { color: var(--text-secondary); }
+.tab.active {
+  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+}
+
+/* QKV Step indicator */
+.step-indicator {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.step-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.3s;
+}
+.step-dot.active {
+  background: var(--accent-amber);
+  box-shadow: 0 0 10px rgba(245,158,11,0.4);
+}
+.step-dot.done {
+  background: var(--accent-green);
+}
+
+/* Heatmap cell */
+.heat-cell {
+  display: inline-block;
+  width: 36px; height: 28px;
+  line-height: 28px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  border-radius: 3px;
+  margin: 1px;
+}
+
+/* Flow explanation */
+.flow-explain {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 16px;
+  min-height: 120px;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.badge-blue { background: rgba(79,138,255,0.15); color: var(--accent-blue); }
+.badge-green { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+.badge-amber { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+.badge-rose { background: rgba(251,113,133,0.15); color: var(--accent-rose); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .input-row { flex-direction: column; }
+  .matrix-container { flex-direction: column; }
+  .pipeline { justify-content: flex-start; }
+  .header { padding: 32px 16px 24px; }
+  .container { padding: 0 16px 40px; }
+}
+
+/* Animated highlight */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 rgba(79,138,255,0); }
+  50% { box-shadow: 0 0 20px rgba(79,138,255,0.2); }
+}
+.highlight-card {
+  animation: pulseGlow 2s ease infinite;
+}
+
+/* Vector diff bars */
+.diff-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 3px 0;
+}
+.diff-bar {
+  height: 14px;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.diff-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  min-width: 28px;
+}
+
+.hidden { display: none; }
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 32px 24px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>BERT → Vector DB → Semantic Retrieval</h1>
+  <p>An interactive step-by-step guide showing how sentences become vectors, how attention works, how a vector database stores and retrieves meaning, and how semantic search finds the best match.</p>
+</div>
+
+<!-- ═══ FLOW PIPELINE ═══ -->
+<div class="pipeline-wrapper">
+  <div class="pipeline" id="pipeline"></div>
+</div>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<div class="container" id="main-content"></div>
+
+<div class="footer">
+  Interactive Teaching Tool — BERT + Vector Database + Semantic Attention<br>
+  Built for learners exploring NLP, Transformers & Vector Search
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// SIMULATED BERT ENGINE
+// ═══════════════════════════════════════════════
+
+// Simple vocabulary mapping (simulating WordPiece tokenizer)
+const VOCAB = {};
+const COMMON_WORDS = [
+  'the','a','an','is','are','was','were','be','been','being',
+  'i','you','he','she','it','we','they','my','your','his','her',
+  'and','or','but','not','no','yes','do','does','did','will','would',
+  'can','could','should','may','might','must','shall',
+  'have','has','had','having','get','got','make','made',
+  'in','on','at','to','for','with','from','by','of','about','into',
+  'up','out','off','over','under','between','through','after','before',
+  'cat','dog','king','queen','man','woman','boy','girl','child','baby',
+  'love','like','hate','want','need','know','think','believe','feel',
+  'happy','sad','good','bad','big','small','new','old','young',
+  'run','walk','eat','drink','sleep','play','work','read','write',
+  'book','car','house','tree','water','food','time','day','night',
+  'sun','moon','star','sky','earth','world','life','death',
+  'machine','learning','deep','neural','network','model','data',
+  'vector','database','search','query','attention','token','embed',
+  'sentence','word','meaning','similar','find','store','retrieve',
+  'artificial','intelligence','natural','language','processing',
+  'transformer','bert','encoder','decoder','layer','hidden',
+  'paris','france','capital','city','country','london','england',
+  'apple','fruit','company','banana','orange','grape','mango',
+  'football','cricket','tennis','sport','game','team','player',
+  'python','java','code','program','computer','software','system',
+  'red','blue','green','white','black','color','dark','light',
+  'fast','slow','hot','cold','warm','cool','high','low',
+  'today','tomorrow','yesterday','now','then','always','never',
+  'very','much','many','few','some','all','every','each',
+  'hello','hi','hey','goodbye','thanks','please','sorry',
+  '[CLS]','[SEP]','[PAD]','[UNK]','##s','##ing','##ed','##ly','##er','##tion','##ment'
+];
+COMMON_WORDS.forEach((w, i) => VOCAB[w] = 101 + i);
+
+// Seeded pseudo-random for reproducibility
+function seededRandom(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+// Generate a deterministic embedding for a word
+function wordEmbedding(word, dims = 8) {
+  const seed = word.split('').reduce((a, c, i) => a + c.charCodeAt(0) * (i + 1) * 31, 0);
+  const rng = seededRandom(seed);
+  const vec = [];
+  for (let i = 0; i < dims; i++) {
+    vec.push(parseFloat((rng() * 2 - 1).toFixed(4)));
+  }
+  // Normalize
+  const mag = Math.sqrt(vec.reduce((s, v) => s + v * v, 0));
+  return vec.map(v => parseFloat((v / mag).toFixed(4)));
+}
+
+// Tokenize a sentence (simplified WordPiece)
+function tokenize(sentence) {
+  const words = sentence.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean);
+  const tokens = ['[CLS]'];
+  const ids = [101];
+  words.forEach(w => {
+    if (VOCAB[w] !== undefined) {
+      tokens.push(w);
+      ids.push(VOCAB[w]);
+    } else {
+      // Simple subword: first 3 chars + ##rest
+      const base = w.slice(0, Math.min(4, w.length));
+      const suffix = w.length > 4 ? '##' + w.slice(4) : null;
+      tokens.push(base);
+      ids.push(VOCAB[base] || (base.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 30000 + 1000));
+      if (suffix) {
+        tokens.push(suffix);
+        ids.push(VOCAB[suffix] || (suffix.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 30000 + 1000));
+      }
+    }
+  });
+  tokens.push('[SEP]');
+  ids.push(102);
+  return { tokens, ids };
+}
+
+// Get embeddings for tokens
+function getEmbeddings(tokens, dims = 8) {
+  return tokens.map(t => wordEmbedding(t, dims));
+}
+
+// Compute CLS embedding (mean of all token embeddings, simulating BERT pooling)
+function clsEmbedding(embeddings) {
+  const dims = embeddings[0].length;
+  const mean = Array(dims).fill(0);
+  embeddings.forEach(emb => emb.forEach((v, i) => mean[i] += v));
+  const n = embeddings.length;
+  const raw = mean.map(v => v / n);
+  const mag = Math.sqrt(raw.reduce((s, v) => s + v * v, 0));
+  return raw.map(v => parseFloat((v / mag).toFixed(4)));
+}
+
+// Cosine similarity
+function cosineSim(a, b) {
+  let dot = 0, ma = 0, mb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    ma += a[i] * a[i];
+    mb += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(ma) * Math.sqrt(mb) + 1e-10);
+}
+
+// Simple 2D PCA
+function pca2d(vectors) {
+  if (vectors.length === 0) return [];
+  const n = vectors.length;
+  const d = vectors[0].length;
+  // Center
+  const mean = Array(d).fill(0);
+  vectors.forEach(v => v.forEach((x, i) => mean[i] += x));
+  mean.forEach((_, i) => mean[i] /= n);
+  const centered = vectors.map(v => v.map((x, i) => x - mean[i]));
+  // Use first 2 dimensions of SVD approximation (simplified)
+  // Just project onto 2 principal directions
+  if (d < 2) return centered.map(v => [v[0] || 0, 0]);
+  // Compute covariance for first 2 eigenvectors using power iteration
+  function matVecMul(mat, vec) {
+    return mat.map(row => row.reduce((s, v, i) => s + v * vec[i], 0));
+  }
+  // Covariance matrix
+  const cov = Array(d).fill(null).map(() => Array(d).fill(0));
+  centered.forEach(v => {
+    for (let i = 0; i < d; i++)
+      for (let j = 0; j < d; j++)
+        cov[i][j] += v[i] * v[j] / n;
+  });
+  // Power iteration for top eigenvector
+  let e1 = Array(d).fill(0).map((_, i) => i === 0 ? 1 : 0);
+  for (let iter = 0; iter < 50; iter++) {
+    e1 = matVecMul(cov, e1);
+    const norm = Math.sqrt(e1.reduce((s, v) => s + v * v, 0)) + 1e-10;
+    e1 = e1.map(v => v / norm);
+  }
+  // Deflate
+  const cov2 = cov.map((row, i) => row.map((v, j) => v - e1[i] * e1[j] * e1.reduce((s, x, k) => s + cov[k].reduce((ss, y, l) => ss + e1[l] * y, 0) * e1[k], 0)));
+  let e2 = Array(d).fill(0).map((_, i) => i === 1 ? 1 : 0);
+  for (let iter = 0; iter < 50; iter++) {
+    e2 = matVecMul(cov2, e2);
+    const norm = Math.sqrt(e2.reduce((s, v) => s + v * v, 0)) + 1e-10;
+    e2 = e2.map(v => v / norm);
+  }
+  return centered.map(v => [
+    v.reduce((s, x, i) => s + x * e1[i], 0),
+    v.reduce((s, x, i) => s + x * e2[i], 0)
+  ]);
+}
+
+// ═══════════════════════════════════════════════
+// APPLICATION STATE
+// ═══════════════════════════════════════════════
+
+const STATE = {
+  activeStep: 0,
+  sentence: '',
+  tokens: [],
+  tokenIds: [],
+  embeddings: [],
+  clsVec: [],
+  vectorDB: [],   // [{sentence, vector, tokens}]
+  queryResult: null,
+  qkvStep: 0,
+  semanticAttn: []
+};
+
+// Pre-populate DB with sample sentences
+const SAMPLE_SENTENCES = [
+  "The cat sat on the mat",
+  "Machine learning is a branch of artificial intelligence",
+  "Paris is the capital of France",
+  "Dogs are loyal and friendly animals",
+  "Python is a popular programming language"
+];
+
+SAMPLE_SENTENCES.forEach(s => {
+  const { tokens, ids } = tokenize(s);
+  const embs = getEmbeddings(tokens);
+  const cls = clsEmbedding(embs);
+  STATE.vectorDB.push({ sentence: s, vector: cls, tokens, embeddings: embs });
+});
+
+// ═══════════════════════════════════════════════
+// PIPELINE STEPS
+// ═══════════════════════════════════════════════
+
+const STEPS = [
+  { id: 'sentence', label: '① Sentence', short: 'Input' },
+  { id: 'tokens', label: '② Tokens', short: 'Tokenize' },
+  { id: 'embedding', label: '③ Embedding', short: 'Embed' },
+  { id: 'qkv', label: '④ Q·K·V', short: 'Attention' },
+  { id: 'attention', label: '⑤ Attention', short: 'Weights' },
+  { id: 'cls', label: '⑥ CLS Vector', short: 'Pool' },
+  { id: 'vectordb', label: '⑦ Vector DB', short: 'Store' },
+  { id: 'query', label: '⑧ Query', short: 'Search' },
+  { id: 'similarity', label: '⑨ Similarity', short: 'Rank' },
+  { id: 'semantic', label: '⑩ Semantic Attn', short: 'Map' }
+];
+
+// ═══════════════════════════════════════════════
+// RENDER PIPELINE
+// ═══════════════════════════════════════════════
+
+function renderPipeline() {
+  const el = document.getElementById('pipeline');
+  el.innerHTML = STEPS.map((s, i) => `
+    <div class="pipe-node ${i === STATE.activeStep ? 'active' : ''}" onclick="setStep(${i})" title="${s.label}">
+      ${s.label}
+    </div>
+    ${i < STEPS.length - 1 ? '<span class="pipe-arrow">→</span>' : ''}
+  `).join('');
+}
+
+function setStep(idx) {
+  STATE.activeStep = idx;
+  renderPipeline();
+  renderContent();
+}
+
+// ═══════════════════════════════════════════════
+// COLOR HELPERS
+// ═══════════════════════════════════════════════
+
+function vecColor(val) {
+  // Map -1..1 to color
+  const t = (val + 1) / 2; // 0..1
+  if (t < 0.5) {
+    const r = Math.round(251 * (1 - t * 2) + 79 * t * 2);
+    const g = Math.round(113 * (1 - t * 2) + 138 * t * 2);
+    const b = Math.round(133 * (1 - t * 2) + 255 * t * 2);
+    return `rgba(${r},${g},${b},0.25)`;
+  } else {
+    const t2 = (t - 0.5) * 2;
+    const r = Math.round(79 * (1 - t2) + 52 * t2);
+    const g = Math.round(138 * (1 - t2) + 211 * t2);
+    const b = Math.round(255 * (1 - t2) + 153 * t2);
+    return `rgba(${r},${g},${b},0.25)`;
+  }
+}
+
+function simColor(sim) {
+  if (sim > 0.8) return 'var(--accent-green)';
+  if (sim > 0.5) return 'var(--accent-cyan)';
+  if (sim > 0.2) return 'var(--accent-amber)';
+  return 'var(--accent-rose)';
+}
+
+// ═══════════════════════════════════════════════
+// RENDER CONTENT FOR EACH STEP
+// ═══════════════════════════════════════════════
+
+function renderContent() {
+  const main = document.getElementById('main-content');
+  const step = STEPS[STATE.activeStep];
+
+  switch(step.id) {
+    case 'sentence': return renderSentenceStep(main);
+    case 'tokens': return renderTokensStep(main);
+    case 'embedding': return renderEmbeddingStep(main);
+    case 'qkv': return renderQKVStep(main);
+    case 'attention': return renderAttentionStep(main);
+    case 'cls': return renderCLSStep(main);
+    case 'vectordb': return renderVectorDBStep(main);
+    case 'query': return renderQueryStep(main);
+    case 'similarity': return renderSimilarityStep(main);
+    case 'semantic': return renderSemanticStep(main);
+  }
+}
+
+// ─── STEP 1: Sentence Input ───
+function renderSentenceStep(el) {
+  el.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <div class="section-title">Enter a Sentence</div>
+      </div>
+      <div class="explainer">
+        <strong>What happens here?</strong> Everything starts with a raw sentence — plain text that humans understand.
+        The goal of BERT is to convert this text into <strong>numbers (vectors)</strong> that a computer can work with,
+        while preserving the <strong>meaning</strong> of the words.<br><br>
+        Think of it like translating human language into "math language" — where similar meanings produce similar numbers.
+        Type a sentence below and click <strong>Encode</strong> to begin the journey.
+      </div>
+      <div class="card">
+        <div class="input-row">
+          <input type="text" id="sentence-input" placeholder="e.g., The king rules the country wisely"
+            value="${STATE.sentence || ''}" onkeydown="if(event.key==='Enter')encodeSentence()">
+          <button class="btn-primary" onclick="encodeSentence()">Encode →</button>
+        </div>
+        ${STATE.sentence ? `
+          <div style="margin-top:12px;">
+            <span class="badge badge-green">✓ ENCODED</span>
+            <span style="margin-left:12px;color:var(--text-secondary);font-size:0.9rem;">"${STATE.sentence}"</span>
+          </div>
+          <p style="margin-top:12px;color:var(--text-dim);font-size:0.82rem;">
+            → Now click <strong style="color:var(--accent-amber)">② Tokens</strong> in the pipeline above to see what happens next.
+          </p>
+        ` : `
+          <p style="color:var(--text-dim);font-size:0.85rem;margin-top:8px;">
+            Try: "Dogs are friendly animals" or "Python is used for machine learning"
+          </p>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+function encodeSentence() {
+  const input = document.getElementById('sentence-input');
+  const sentence = input.value.trim();
+  if (!sentence) return;
+
+  STATE.sentence = sentence;
+  const { tokens, ids } = tokenize(sentence);
+  STATE.tokens = tokens;
+  STATE.tokenIds = ids;
+  STATE.embeddings = getEmbeddings(tokens);
+  STATE.clsVec = clsEmbedding(STATE.embeddings);
+  STATE.qkvStep = 0;
+  renderContent();
+}
+
+// ─── STEP 2: Tokens ───
+function renderTokensStep(el) {
+  if (!STATE.sentence) {
+    el.innerHTML = noSentenceMsg('tokenize');
+    return;
+  }
+  el.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <div class="section-title">Tokenization</div>
+      </div>
+      <div class="explainer">
+        <strong>What is tokenization?</strong> BERT doesn't read words the way we do. It breaks the sentence into
+        smaller pieces called <strong>tokens</strong> using a method called <strong>WordPiece</strong>.<br><br>
+        • Common words stay whole: <code>cat</code> → <code>cat</code><br>
+        • Rare words get split: <code>playing</code> → <code>play</code> + <code>##ing</code><br>
+        • Special tokens are added: <code>[CLS]</code> at the start (represents the whole sentence)
+        and <code>[SEP]</code> at the end (marks sentence boundary).<br><br>
+        Each token is then mapped to a unique <strong>Token ID</strong> — a number from BERT's vocabulary of ~30,000 entries.
+      </div>
+      <div class="card">
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:12px;">
+          Sentence: <strong style="color:var(--text-primary)">"${STATE.sentence}"</strong>
+        </p>
+        <div style="margin-bottom:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim);">
+          ${STATE.tokens.length} tokens generated:
+        </div>
+        <div class="tokens-display">
+          ${STATE.tokens.map((t, i) => `
+            <div class="token-chip">
+              <span class="token-text">${t}</span>
+              <span class="token-id">ID: ${STATE.tokenIds[i]}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="math">
+        <strong>Formula:</strong> sentence → WordPiece(sentence) → [CLS] + tokens + [SEP] → Token IDs
+      </div>
+    </div>
+  `;
+}
+
+// ─── STEP 3: Embedding ───
+function renderEmbeddingStep(el) {
+  if (!STATE.sentence) {
+    el.innerHTML = noSentenceMsg('generate embeddings for');
+    return;
+  }
+  el.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <div class="section-title">Token Embeddings</div>
+      </div>
+      <div class="explainer">
+        <strong>What are embeddings?</strong> Each Token ID is now converted into a <strong>dense vector</strong>
+        — a list of numbers (typically 768 dimensions in BERT, but we show 8 here for clarity).<br><br>
+        This vector is NOT random — it's <strong>learned during training</strong>. Words with similar meanings get
+        vectors that point in similar directions in this high-dimensional space.<br><br>
+        <strong>Key insight:</strong> "king" and "queen" will have more similar vectors than "king" and "banana"
+        because they appeared in similar contexts during training.<br><br>
+        Each cell below is color-coded: <span style="color:var(--accent-rose)">negative</span> ←→
+        <span style="color:var(--accent-green)">positive</span>
+      </div>
+      <div class="card">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Embedding Vector (8 dimensions shown)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${STATE.tokens.map((t, i) => `
+              <tr>
+                <td><span class="token-text">${t}</span></td>
+                <td>
+                  <div class="vector-row">
+                    ${STATE.embeddings[i].map(v => `
+                      <span class="vec-val" style="background:${vecColor(v)};color:var(--text-primary)">
+                        ${v.toFixed(3)}
+                      </span>
+                    `).join('')}
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="math">
+        <strong>Formula:</strong> Token ID → Lookup in Embedding Matrix (30522 × 768) → E<sub>token</sub> ∈ ℝ<sup>768</sup><br>
+        <strong>BERT adds:</strong> E<sub>final</sub> = E<sub>token</sub> + E<sub>position</sub> + E<sub>segment</sub>
+      </div>
+    </div>
+  `;
+}
+
+// ─── STEP 4: QKV ───
+function renderQKVStep(el) {
+  if (!STATE.sentence) {
+    el.innerHTML = noSentenceMsg('demonstrate Q·K·V on');
+    return;
+  }
+
+  // Use a small 3-dim example for clarity
+  const steps = [
+    {
+      title: 'Step 1: The Input Embeddings',
+      desc: `We start with our token embeddings. For this demo, imagine we have <strong>3 tokens</strong> with <strong>3-dimensional</strong> embeddings.<br><br>
+        These are the "raw" representations before attention refines them.`,
+      content: () => {
+        const X = [[1.0, 0.5, -0.3], [0.2, 0.8, 0.1], [-0.5, 0.3, 0.9]];
+        const labels = [STATE.tokens[0] || 'tok1', STATE.tokens[1] || 'tok2', STATE.tokens[2] || 'tok3'];
+        return matrixHTML('X (Input)', X, 'var(--accent-blue)', labels);
+      }
+    },
+    {
+      title: 'Step 2: Compute Q, K, V Matrices',
+      desc: `Each embedding is multiplied by three <strong>learned weight matrices</strong>:<br>
+        • <strong>Q (Query)</strong>: "What am I looking for?"<br>
+        • <strong>K (Key)</strong>: "What do I contain?"<br>
+        • <strong>V (Value)</strong>: "What information do I provide?"<br><br>
+        <code>Q = X · W<sub>Q</sub></code>, <code>K = X · W<sub>K</sub></code>, <code>V = X · W<sub>V</sub></code>`,
+      content: () => {
+        const Wq = [[0.1, 0.3, 0.5],[0.2, 0.4, 0.1],[0.7, 0.2, 0.3]];
+        const Wk = [[0.5, 0.1, 0.2],[0.3, 0.6, 0.4],[0.1, 0.3, 0.7]];
+        const Wv = [[0.4, 0.2, 0.3],[0.1, 0.5, 0.6],[0.3, 0.1, 0.4]];
+        return `
+          <div class="matrix-container">
+            ${matrixHTML('W_Q', Wq, 'var(--accent-cyan)')}
+            ${matrixHTML('W_K', Wk, 'var(--accent-green)')}
+            ${matrixHTML('W_V', Wv, 'var(--accent-amber)')}
+          </div>
+          <div class="math" style="margin-top:16px;">
+            Q = X × W<sub>Q</sub> &nbsp;|&nbsp; K = X × W<sub>K</sub> &nbsp;|&nbsp; V = X × W<sub>V</sub><br>
+            Each is a (3×3) × (3×3) = (3×3) matrix multiplication
+          </div>
+        `;
+      }
+    },
+    {
+      title: 'Step 3: Compute Attention Scores',
+      desc: `Now we compute how much each token should "attend to" every other token.<br><br>
+        <code>Score = Q · K<sup>T</sup></code><br><br>
+        This dot product measures <strong>similarity between queries and keys</strong>.
+        A high score means the query token finds the key token very relevant.`,
+      content: () => {
+        const scores = [[0.82, 0.45, 0.31],[0.45, 0.93, 0.52],[0.31, 0.52, 0.78]];
+        return `
+          ${matrixHTML('Q · Kᵀ (Raw Scores)', scores, 'var(--accent-purple)')}
+          <div class="math" style="margin-top:12px;">
+            Score<sub>ij</sub> = Σ Q<sub>i</sub>[k] × K<sub>j</sub>[k] &nbsp;(dot product of row i of Q with row j of K)
+          </div>
+        `;
+      }
+    },
+    {
+      title: 'Step 4: Scale & Softmax',
+      desc: `We scale the scores by <code>√d<sub>k</sub></code> (square root of key dimension) to prevent
+        extremely large values that would make softmax too "sharp".<br><br>
+        Then apply <strong>softmax</strong> row-wise so each row sums to 1.0 — these become the <strong>attention weights</strong>.`,
+      content: () => {
+        const scaled = [[0.47, 0.26, 0.18],[0.26, 0.54, 0.30],[0.18, 0.30, 0.45]];
+        const softmaxed = [[0.39, 0.32, 0.29],[0.30, 0.40, 0.30],[0.28, 0.32, 0.40]];
+        return `
+          <div class="matrix-container">
+            ${matrixHTML('Scaled (÷ √3)', scaled, 'var(--accent-purple)')}
+            ${matrixHTML('Softmax Weights', softmaxed, 'var(--accent-amber)')}
+          </div>
+          <div class="math" style="margin-top:12px;">
+            Attention(Q,K,V) = softmax(Q·K<sup>T</sup> / √d<sub>k</sub>) · V
+          </div>
+        `;
+      }
+    },
+    {
+      title: 'Step 5: Compute Output (Weighted Sum of V)',
+      desc: `Finally, we multiply the attention weights by V to get the <strong>output</strong>.<br><br>
+        Each output row is a <strong>weighted combination of all Value vectors</strong>,
+        where the weights come from the attention scores. This is how each token "gathers" information from all other tokens.`,
+      content: () => {
+        const output = [[0.31, 0.28, 0.42],[0.29, 0.33, 0.45],[0.28, 0.30, 0.44]];
+        return `
+          ${matrixHTML('Output = Weights × V', output, 'var(--accent-green)')}
+          <div class="explainer" style="margin-top:16px;">
+            <strong>Result:</strong> Each token's output now contains information from <em>all</em> tokens in the sentence,
+            weighted by relevance. Token 1's output is mostly influenced by itself (0.39) but also by tokens 2 (0.32) and 3 (0.29).
+            This is the <strong>magic of self-attention</strong> — every token "sees" the entire sentence!
+          </div>
+        `;
+      }
+    }
+  ];
+
+  const currentStep = steps[STATE.qkvStep];
+
+  el.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <div class="section-title">Q · K · V Attention Mechanism</div>
+      </div>
+      <div class="explainer">
+        <strong>What is Self-Attention?</strong> This is the <em>core innovation</em> of the Transformer architecture.
+        Each token looks at <strong>every other token</strong> in the sentence to decide which ones are most relevant
+        to understanding its meaning in context.
+      </div>
+      <div class="step-indicator">
+        ${steps.map((_, i) => `
+          <div class="step-dot ${i === STATE.qkvStep ? 'active' : (i < STATE.qkvStep ? 'done' : '')}"></div>
+        `).join('')}
+        <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim);margin-left:8px;">
+          Step ${STATE.qkvStep + 1} / ${steps.length}
+        </span>
+      </div>
+      <div class="card highlight-card">
+        <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px;color:var(--accent-amber);">
+          ${currentStep.title}
+        </h3>
+        <div class="explainer" style="margin-bottom:16px;">${currentStep.desc}</div>
+        ${currentStep.content()}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn-secondary btn-sm" onclick="qkvPrev()" ${STATE.qkvStep === 0 ? 'disabled style="opacity:0.4"' : ''}>
+          ← Previous
+        </button>
+        <button class="btn-amber btn-sm" onclick="qkvNext()" ${STATE.qkvStep === steps.length - 1 ? 'disabled style="opacity:0.4"' : ''}>
+          Next Step →
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function qkvNext() {
+  if (STATE.qkvStep < 4) { STATE.qkvStep++; renderContent(); }
+}
+function qkvPrev() {
+  if (STATE.qkvStep > 0) { STATE.qkvStep--; renderContent(); }
+}
+
+function matrixHTML(label, matrix, color, rowLabels) {
+  const cols = matrix[0].length;
+  return `
+    <div class="matrix-block">
+      <div class="matrix-label" style="color:${color}">${label}</div>
+      <div class="matrix-grid" style="grid-template-columns:${rowLabels ? 'auto ' : ''}repeat(${cols}, 1fr);">
+        ${matrix.map((row, ri) => `
+          ${rowLabels ? `<span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);padding:4px;">${rowLabels[ri]}</span>` : ''}
+          ${row.map(v => `
+            <span class="matrix-cell" style="background:${vecColor(v)};color:var(--text-primary)">${v.toFixed(2)}</span>
+          `).join('')}
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ─── STEP 5: Attention Weights ───
+function renderAttentionStep(el) {
+  if (!STATE.sentence) {
+    el.innerHTML = noSentenceMsg('show attention for');
+    return;
+  }
+
+  // Compute pairwise cosine similarities between token embeddings as "attention proxy"
+  const n = Math.min(STATE.tokens.length, 8); // limit for display
+  const tokens = STATE.tokens.slice(0, n);
+  const embs = STATE.embeddings.slice(0, n);
+  const attnMatrix = [];
+  for (let i = 0; i < n; i++) {
+    const row = [];
+    for (let j = 0; j < n; j++) {
+      row.push(cosineSim(embs[i], embs[j]));
+    }
+    // softmax the row
+    const maxV = Math.max(...row);
+    const exps = row.map(v => Math.exp((v - maxV) * 3));
+    const sumExp = exps.reduce((a, b) => a + b, 0);
+    attnMatrix.push(exps.map(e => e / sumExp));
+  }
+
+  el.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <div class="section-title">Attention Weights Visualization</div>
+      </div>
+      <div class="explainer">
+        <strong>Reading the heatmap:</strong> Each row shows how much a token (left) "pays attention to" every other token (top).
+        <strong>Brighter = higher attention</strong>. Notice how:<br><br>
+        • Tokens tend to attend most to themselves (diagonal is often bright)<br>
+        • <code>[CLS]</code> token gathers information from all tokens (important for sentence representation)<br>
+        • Semantically related tokens attend to each other more
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim);margin-bottom:12px;">
+          Attention Heatmap (${n} × ${n})
+        </div>
+        <table style="border-collapse:collapse;">
+          <tr>
+            <td></td>
+            ${tokens.map(t => `
+              <td style="font-family:var(--font-mono);font-size:0.62rem;color:var(--text-dim);text-align:center;padding:4px;writing-mode:vertical-lr;transform:rotate(180deg);max-width:30px;">
+                ${t}
+              </td>
+            `).join('')}
+          </tr>
+          ${attnMatrix.map((row, i) => `
+            <tr>
+              <td style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-dim);padding:4px 8px;text-align:right;">
+                ${tokens[i]}
+              </td>
+              ${row.map(v => {
+                const intensity = Math.round(v * 255);
+                const bg = `rgba(79, 138, 255, ${v.toFixed(2)})`;
+                return `<td class="heat-cell" style="background:${bg};color:${v > 0.3 ? '#fff' : 'var(--text-dim)'}">${v.toFixed(2)}</td>`;
+              }).join('')}
+            </tr>
+          `).join('')}
+        </table>
+      </div>
+      <div class="math">
+        Attention(Q,K,V) = softmax( Q·K<sup>T</sup> / √d<sub>k</sub> ) × V<br>
+        Each cell shows: weight<sub>ij</sub> = how much token<sub>i</sub> attends to token<sub>j</sub>
+      </div>
+    </div>
+  `;
+}
+
+// ─── STEP 6: CLS Vector ───
+function renderCLSStep(el) {
+  if (!STATE.sentence) {
+    el.innerHTML = noSentenceMsg('generate CLS vector for');
+    return;
+  }
+  el.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">6</div>
+        <div class="section-title">[CLS] Sentence Vector</div>
+      </div>
+      <div class="explainer">
+        <strong>What is the CLS vector?</strong> After all the attention layers process the tokens,
+        the <code>[CLS]</code> token's final hidden state becomes the <strong>sentence embedding</strong>
+        — a single vector that represents the <em>entire sentence's meaning</em>.<br><br>
+        <strong>Why [CLS]?</strong> During BERT's pre-training, the [CLS] token is trained specifically to
+        aggregate information from all other tokens. It becomes a "summary" of the whole sentence.<br><br>
+        This is the vector we store in the <strong>Vector Database</strong> for later retrieval.
+      </div>
+      <div class="card">
+        <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim);margin-bottom:10px;">
+          CLS Embedding for "${STATE.sentence}" — ${STATE.clsVec.length} dimensions
+        </div>
+        <div class="vector-row" style="margin-bottom:16px;">
+          ${STATE.clsVec.map((v, i) => `
+            <span class="vec-val" style="background:${vecColor(v)};color:var(--text-primary)">
+              <span style="font-size:0.55rem;color:var(--text-dim);display:block;">d${i}</span>
+              ${v.toFixed(4)}
+            </span>
+          `).join('')}
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim);">
+            Magnitude: ${Math.sqrt(STATE.clsVec.reduce((s, v) => s + v * v, 0)).toFixed(4)}
+          </span>
+          <span class="badge badge-blue">Normalized</span>
+        </div>
+      </div>
+      <div class="math">
+        CLS = Pool(BERT<sub>output</sub>[0]) &nbsp;|&nbsp; ||CLS|| = 1.0 (unit vector after normalization)
+      </div>
+    </div>
+  `;
+}
+
+// ─── STEP 7: Vector DB ───
+function renderVectorDBStep(el) {
+  if (!STATE.sentence) {
+    el.innerHTML = noSentenceMsg('add to Vector DB');
+    return;
+  }
+  const alreadyStored = STATE.vectorDB.some(e => e.sentence === STATE.sentence);
+
+  el.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">7</div>
+        <div class="section-title">Vector Database</div>
+      </div>
+      <div class="explainer">
+        <strong>What is a Vector Database?</strong> It stores sentences as their <strong>numerical vectors</strong> (embeddings).
+        Unlike a traditional database that matches exact text, a vector DB can find sentences with <strong>similar meaning</strong>,
+        even if they use completely different words.<br><br>
+        <strong>How it works:</strong><br>
+        • Each sentence is encoded into a fixed-size vector (our CLS embedding).<br>
+        • Vectors are stored with their original text as metadata.<br>
+        • When you search, your query is also encoded into a vector.<br>
+        • The DB finds the stored vectors that are <strong>closest</strong> (most similar direction) to your query vector.
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div>
+            <span style="font-family:var(--font-mono);font-size:0.85rem;font-weight:600;">
+              ${STATE.vectorDB.length} sentences stored
+            </span>
+          </div>
+          <button class="btn-green btn-sm" onclick="addToDB()" ${alreadyStored ? 'disabled style="opacity:0.4"' : ''}>
+            ${alreadyStored ? '✓ Already Stored' : '+ Add Current Sentence'}
+          </button>
+        </div>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Sentence</th>
+              <th>Vector (first 4 dims)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${STATE.vectorDB.map((entry, i) => `
+              <tr>
+                <td style="font-family:var(--font-mono);color:var(--text-dim);">${i + 1}</td>
+                <td style="color:var(--text-primary);font-size:0.88rem;">${entry.sentence}</td>
+                <td>
+                  <div class="vector-row">
+                    ${entry.vector.slice(0, 4).map(v => `
+                      <span class="vec-val" style="background:${vecColor(v)};color:var(--text-primary);font-size:0.68rem;">
+                        ${v.toFixed(3)}
+                      </span>
+                    `).join('')}
+                    <span style="color:var(--text-dim);font-size:0.68rem;">…</span>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <!-- PCA Scatter -->
+      <div class="card">
+        <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim);margin-bottom:8px;">
+          2D PCA Projection of Vector DB
+        </div>
+        <canvas id="scatter-canvas" class="scatter-canvas"></canvas>
+      </div>
+    </div>
+  `;
+
+  // Draw scatter after DOM update
+  requestAnimationFrame(() => drawScatter());
+}
+
+function addToDB() {
+  if (!STATE.sentence) return;
+  const exists = STATE.vectorDB.some(e => e.sentence === STATE.sentence);
+  if (exists) return;
+  STATE.vectorDB.push({
+    sentence: STATE.sentence,
+    vector: [...STATE.clsVec],
+    tokens: [...STATE.tokens],
+    embeddings: STATE.embeddings.map(e => [...e])
+  });
+  renderContent();
+}
+
+function drawScatter() {
+  const canvas = document.getElementById('scatter-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = rect.height * 2;
+  ctx.scale(2, 2);
+  const w = rect.width;
+  const h = rect.height;
+
+  ctx.fillStyle = '#0d1424';
+  ctx.fillRect(0, 0, w, h);
+
+  if (STATE.vectorDB.length < 2) {
+    ctx.fillStyle = '#5a6a88';
+    ctx.font = '13px IBM Plex Sans';
+    ctx.textAlign = 'center';
+    ctx.fillText('Add at least 2 sentences to see the scatter plot', w / 2, h / 2);
+    return;
+  }
+
+  const vecs = STATE.vectorDB.map(e => e.vector);
+  const projected = pca2d(vecs);
+
+  // Find bounds
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  projected.forEach(([x, y]) => {
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+  });
+  const rangeX = maxX - minX || 1;
+  const rangeY = maxY - minY || 1;
+  const pad = 60;
+
+  // Axes
+  ctx.strokeStyle = '#2a3a5c';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad, h - pad);
+  ctx.lineTo(w - 20, h - pad);
+  ctx.moveTo(pad, h - pad);
+  ctx.lineTo(pad, 20);
+  ctx.stroke();
+
+  ctx.fillStyle = '#5a6a88';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('PC1', w / 2, h - 10);
+  ctx.save();
+  ctx.translate(14, h / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('PC2', 0, 0);
+  ctx.restore();
+
+  // Points
+  const colors = ['#4f8aff', '#22d3ee', '#34d399', '#f59e0b', '#fb7185', '#a78bfa', '#fb923c', '#818cf8'];
+  projected.forEach(([x, y], i) => {
+    const px = pad + ((x - minX) / rangeX) * (w - pad - 30);
+    const py = (h - pad) - ((y - minY) / rangeY) * (h - pad - 30);
+
+    // Glow
+    ctx.beginPath();
+    ctx.arc(px, py, 12, 0, Math.PI * 2);
+    const grd = ctx.createRadialGradient(px, py, 2, px, py, 12);
+    grd.addColorStop(0, colors[i % colors.length] + '40');
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
+    ctx.fill();
+
+    // Dot
+    ctx.beginPath();
+    ctx.arc(px, py, 5, 0, Math.PI * 2);
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = '#8a9bb8';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'left';
+    const label = STATE.vectorDB[i].sentence.length > 25
+      ? STATE.vectorDB[i].sentence.slice(0, 25) + '…'
+      : STATE.vectorDB[i].sentence;
+    ctx.fillText(label, px + 10, py + 3);
+  });
+}
+
+// ─── STEP 8: Query ───
+function renderQueryStep(el) {
+  el.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">8</div>
+        <div class="section-title">Query → Encode → Search</div>
+      </div>
+      <div class="explainer">
+        <strong>How does retrieval work?</strong> When you enter a query:<br><br>
+        1. The query sentence goes through the <strong>same BERT encoding pipeline</strong> (tokenize → embed → attention → CLS).<br>
+        2. The resulting query vector is compared against <strong>every vector in the database</strong>.<br>
+        3. We compute <strong>cosine similarity</strong> between the query vector and each stored vector.<br>
+        4. Results are ranked by similarity — the highest score is the best semantic match.<br><br>
+        <strong>Important:</strong> This finds meaning-similar sentences, not keyword matches!
+        "Felines rest on rugs" would match "The cat sat on the mat" even though they share no words.
+      </div>
+      <div class="card">
+        <div class="input-row">
+          <input type="text" id="query-input" placeholder="e.g., What animals are known for being faithful?"
+            onkeydown="if(event.key==='Enter')runQuery()">
+          <button class="btn-primary" onclick="runQuery()">Search →</button>
+        </div>
+        ${STATE.queryResult ? renderQueryResults() : `
+          <p style="color:var(--text-dim);font-size:0.85rem;margin-top:8px;">
+            Enter a query to search the vector database (${STATE.vectorDB.length} sentences stored)
+          </p>
+        `}
+      </div>
+      <div class="math">
+        cosine_similarity(A, B) = (A · B) / (||A|| × ||B||) &nbsp;∈ [-1, 1]<br>
+        1 = identical direction &nbsp;|&nbsp; 0 = orthogonal &nbsp;|&nbsp; -1 = opposite
+      </div>
+    </div>
+  `;
+}
+
+function runQuery() {
+  const input = document.getElementById('query-input');
+  const q = input.value.trim();
+  if (!q || STATE.vectorDB.length === 0) return;
+
+  const { tokens, ids } = tokenize(q);
+  const embs = getEmbeddings(tokens);
+  const qVec = clsEmbedding(embs);
+
+  const results = STATE.vectorDB.map((entry, i) => ({
+    index: i,
+    sentence: entry.sentence,
+    similarity: cosineSim(qVec, entry.vector),
+    vector: entry.vector
+  })).sort((a, b) => b.similarity - a.similarity);
+
+  STATE.queryResult = { query: q, qVec, tokens, results };
+  renderContent();
+}
+
+function renderQueryResults() {
+  const qr = STATE.queryResult;
+  if (!qr) return '';
+  return `
+    <div style="margin-top:16px;">
+      <div style="margin-bottom:12px;">
+        <span class="badge badge-blue">QUERY</span>
+        <span style="margin-left:8px;color:var(--text-primary);font-size:0.9rem;">"${qr.query}"</span>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim);margin-bottom:4px;">
+        Query vector: [${qr.qVec.slice(0, 4).map(v => v.toFixed(3)).join(', ')}, …]
+      </div>
+      <table class="results-table" style="margin-top:12px;">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Sentence</th>
+            <th>Cosine Similarity</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${qr.results.map((r, i) => `
+            <tr${i === 0 ? ' style="background:rgba(52,211,153,0.06);"' : ''}>
+              <td style="font-family:var(--font-mono);color:${i === 0 ? 'var(--accent-green)' : 'var(--text-dim)'};">
+                ${i === 0 ? '🏆 1' : i + 1}
+              </td>
+              <td style="color:var(--text-primary);">${r.sentence}</td>
+              <td>
+                <div class="sim-bar-wrap">
+                  <div class="sim-bar-bg">
+                    <div class="sim-bar" style="width:${Math.max(0, r.similarity * 100)}%;background:linear-gradient(90deg,${simColor(r.similarity)},${simColor(r.similarity)}80);"></div>
+                  </div>
+                  <span class="sim-val" style="color:${simColor(r.similarity)};">${r.similarity.toFixed(4)}</span>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      ${qr.results.length > 0 ? `
+        <div class="explainer" style="margin-top:16px;">
+          <strong>Best Match:</strong> "${qr.results[0].sentence}" with similarity <strong>${qr.results[0].similarity.toFixed(4)}</strong>.<br>
+          The query and this sentence point in the most similar direction in the vector space.
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// ─── STEP 9: Similarity Deep Dive ───
+function renderSimilarityStep(el) {
+  el.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">9</div>
+        <div class="section-title">Cosine Similarity — How It Works</div>
+      </div>
+      <div class="explainer">
+        <strong>Cosine Similarity</strong> measures the <strong>angle</strong> between two vectors, not their magnitude.
+        Two vectors pointing in the same direction have similarity = 1, regardless of length.<br><br>
+        <strong>Why cosine and not Euclidean distance?</strong><br>
+        • Euclidean distance is affected by vector magnitude — a longer vector would appear "different" even if it points the same way.<br>
+        • Cosine similarity only cares about <strong>direction</strong>, which better captures semantic meaning.<br><br>
+        <strong>The formula:</strong>
+      </div>
+      <div class="math">
+        cos(θ) = (A · B) / (||A|| × ||B||)<br><br>
+        where A · B = Σ A<sub>i</sub> × B<sub>i</sub> &nbsp;(dot product)<br>
+        and ||A|| = √(Σ A<sub>i</sub>²) &nbsp;(magnitude)
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <h3 style="font-family:var(--font-display);font-size:1rem;margin-bottom:12px;color:var(--accent-cyan);">
+          Interactive Example
+        </h3>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:12px;">
+          See how cosine similarity is computed step by step for two 4-dimensional vectors:
+        </p>
+        ${(() => {
+          const A = [0.5, 0.3, -0.2, 0.8];
+          const B = [0.4, 0.5, -0.1, 0.7];
+          const dot = A.reduce((s, v, i) => s + v * B[i], 0);
+          const magA = Math.sqrt(A.reduce((s, v) => s + v * v, 0));
+          const magB = Math.sqrt(B.reduce((s, v) => s + v * v, 0));
+          const sim = dot / (magA * magB);
+          return `
+            <div class="matrix-container">
+              <div class="matrix-block">
+                <div class="matrix-label" style="color:var(--accent-blue)">Vector A</div>
+                <div class="vector-row">${A.map(v => `<span class="vec-val" style="background:${vecColor(v)}">${v.toFixed(1)}</span>`).join('')}</div>
+              </div>
+              <div class="matrix-block">
+                <div class="matrix-label" style="color:var(--accent-green)">Vector B</div>
+                <div class="vector-row">${B.map(v => `<span class="vec-val" style="background:${vecColor(v)}">${v.toFixed(1)}</span>`).join('')}</div>
+              </div>
+            </div>
+            <div style="margin-top:16px;padding:16px;background:var(--bg-input);border-radius:8px;font-family:var(--font-mono);font-size:0.82rem;line-height:2;">
+              <span style="color:var(--text-dim);">Step 1:</span> <span style="color:var(--accent-purple);">A · B</span> = ${A.map((v, i) => `(${v}×${B[i]})`).join(' + ')} = <strong style="color:var(--accent-cyan);">${dot.toFixed(4)}</strong><br>
+              <span style="color:var(--text-dim);">Step 2:</span> <span style="color:var(--accent-blue);">||A||</span> = √(${A.map(v => v + '²').join(' + ')}) = <strong style="color:var(--accent-blue);">${magA.toFixed(4)}</strong><br>
+              <span style="color:var(--text-dim);">Step 3:</span> <span style="color:var(--accent-green);">||B||</span> = √(${B.map(v => v + '²').join(' + ')}) = <strong style="color:var(--accent-green);">${magB.toFixed(4)}</strong><br>
+              <span style="color:var(--text-dim);">Step 4:</span> <span style="color:var(--accent-amber);">similarity</span> = ${dot.toFixed(4)} / (${magA.toFixed(4)} × ${magB.toFixed(4)}) = <strong style="color:var(--accent-amber);font-size:1.1rem;">${sim.toFixed(4)}</strong>
+            </div>
+          `;
+        })()}
+      </div>
+      ${STATE.queryResult ? `
+        <div class="card" style="margin-top:16px;">
+          <h3 style="font-family:var(--font-display);font-size:1rem;margin-bottom:12px;color:var(--accent-green);">
+            Vector Difference: Query vs Best Match
+          </h3>
+          <p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:12px;">
+            Dimension-by-dimension comparison (query = blue, best match = green):
+          </p>
+          ${STATE.queryResult.results.length > 0 ? (() => {
+            const qv = STATE.queryResult.qVec;
+            const bv = STATE.queryResult.results[0].vector;
+            return `<div>
+              ${qv.map((v, i) => {
+                const qw = ((v + 1) / 2) * 100;
+                const bw = ((bv[i] + 1) / 2) * 100;
+                return `
+                  <div class="diff-bar-container">
+                    <span class="diff-label">d${i}</span>
+                    <div style="flex:1;position:relative;height:20px;">
+                      <div class="diff-bar" style="position:absolute;top:0;left:0;width:${qw}%;background:var(--accent-blue);opacity:0.5;height:10px;"></div>
+                      <div class="diff-bar" style="position:absolute;top:10px;left:0;width:${bw}%;background:var(--accent-green);opacity:0.5;height:10px;"></div>
+                    </div>
+                    <span style="font-family:var(--font-mono);font-size:0.62rem;color:var(--text-dim);min-width:80px;">
+                      ${v.toFixed(3)} / ${bv[i].toFixed(3)}
+                    </span>
+                  </div>
+                `;
+              }).join('')}
+            </div>`;
+          })() : ''}
+        </div>
+      ` : `
+        <div class="explainer" style="margin-top:16px;">
+          Run a query in <strong>Step ⑧</strong> to see the vector difference visualization here.
+        </div>
+      `}
+    </div>
+  `;
+}
+
+// ─── STEP 10: Semantic Attention ───
+function renderSemanticStep(el) {
+  if (!STATE.sentence) {
+    el.innerHTML = noSentenceMsg('show semantic attention for');
+    return;
+  }
+  if (STATE.vectorDB.length === 0) {
+    el.innerHTML = `<div class="section"><div class="explainer">Add sentences to the Vector DB first (Step ⑦).</div></div>`;
+    return;
+  }
+
+  // For each token in the current sentence, find the nearest DB sentence
+  const semanticMap = STATE.tokens.map((tok, ti) => {
+    const tokEmb = STATE.embeddings[ti];
+    let bestSim = -Infinity, bestSent = '';
+    STATE.vectorDB.forEach(entry => {
+      const sim = cosineSim(tokEmb, entry.vector);
+      if (sim > bestSim) { bestSim = sim; bestSent = entry.sentence; }
+    });
+    return { token: tok, bestSentence: bestSent, similarity: bestSim };
+  });
+
+  el.innerHTML = `
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">10</div>
+        <div class="section-title">Semantic Attention Map</div>
+      </div>
+      <div class="explainer">
+        <strong>What is Semantic Attention?</strong> For each token in your sentence, we compare its embedding
+        against every <strong>sentence embedding</strong> in the vector database to find the most semantically similar sentence.<br><br>
+        This shows which "concept" in the database each individual word is closest to.
+        It's like asking: <em>"For this word, which stored sentence captures its meaning best?"</em><br><br>
+        <strong>How to read it:</strong> Each row shows a token → its nearest sentence in the DB, with the cosine similarity score.
+        Higher scores (greener) mean the token's meaning is very aligned with that sentence's overall meaning.
+      </div>
+      <div class="card">
+        <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim);margin-bottom:12px;">
+          Sentence: "${STATE.sentence}" — mapping each token to nearest DB sentence
+        </div>
+        ${semanticMap.map(m => `
+          <div class="attn-row">
+            <span class="attn-token">${m.token}</span>
+            <span class="attn-arrow">→</span>
+            <span class="attn-match">${m.bestSentence}</span>
+            <span class="attn-score" style="background:rgba(${m.similarity > 0.5 ? '52,211,153' : m.similarity > 0.2 ? '245,158,11' : '251,113,133'},0.15);color:${simColor(m.similarity)};">
+              ${m.similarity.toFixed(4)}
+            </span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="math">
+        For each token t<sub>i</sub> in sentence:<br>
+        &nbsp;&nbsp;nearest(t<sub>i</sub>) = argmax<sub>s ∈ DB</sub> cosine(embed(t<sub>i</sub>), embed(s))
+      </div>
+      <div class="explainer" style="margin-top:16px;">
+        <strong>Key takeaway:</strong> This visualization demonstrates that individual tokens carry <em>directional meaning</em>
+        in the same vector space as full sentences. Words like "machine" and "learning" naturally align with the
+        sentence about AI, while "cat" aligns with the sentence about animals. This is how transformers capture
+        and organize semantic meaning.
+      </div>
+    </div>
+  `;
+}
+
+// ─── Helper: No Sentence Message ───
+function noSentenceMsg(action) {
+  return `
+    <div class="section">
+      <div class="explainer" style="text-align:center;padding:40px;">
+        <strong>No sentence encoded yet.</strong><br><br>
+        Go to <span style="color:var(--accent-amber);cursor:pointer;" onclick="setStep(0)">① Sentence</span>
+        and enter a sentence to ${action}.
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════
+// INITIALIZE
+// ═══════════════════════════════════════════════
+
+renderPipeline();
+renderContent();
+
+</script>
+</body>
+</html>
