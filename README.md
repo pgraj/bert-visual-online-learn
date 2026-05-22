@@ -59,6 +59,39 @@ The project is designed for learning, not production. It uses a small set of sam
 7. Sentence vectors can be stored in a simple vector DB.
 8. A query sentence is encoded and compared with stored vectors using cosine similarity.
 
+## 🧠 BERT → Vector DB → Semantic Retrieval | Interactive Teaching Tool
+
+An interactive, single-file web application designed to visually demonstrate how Natural Language Processing (NLP) models, transformers, and vector databases work together to power semantic search.
+
+This tool is built completely using vanilla web technologies (**HTML5, CSS3, and JavaScript**) with zero external runtime dependencies. It serves as an intuitive sandbox for students, developers, and AI enthusiasts trying to understand modern vector embeddings.
+
+### 🚀 Live Demo & How to Use
+Since the entire pipeline is simulated right inside the browser, you don't need to configure a backend server, Python environment, or external databases. 
+
+1. Save the `bert-vectordb-tool.html` file locally.
+2. Double-click the file to open it in any modern web browser (Chrome, Firefox, Safari, Edge).
+3. Type a sentence in **Step 1** and click **Encode** to watch it travel through the pipeline!
+
+### 🔍 Interactive Pipeline Breakdown
+
+The application guides users through a comprehensive **10-step educational workflow**:
+
+* **1. Sentence Input:** The genesis of raw text ingestion.
+* **2. Tokenization:** Visualizes a simulated `WordPiece` tokenizer adding `[CLS]` and `[SEP]` tokens.
+* **3. Token Embeddings:** Maps token IDs to continuous dense vectors with color-coded positive/negative weights.
+* **4. Q · K · V Attention:** A step-by-step math conceptualizer for Query, Key, and Value matrix multiplications.
+* **5. Attention Weights:** Renders a dynamic, interactive attention intensity heatmap.
+* **6. CLS Vector:** Demonstrates how sentence pooling isolates the definitive sentence-level embedding.
+* **7. Vector DB:** Tracks multi-vector indices and maps them visually using a custom **2D PCA Projection Plot**.
+* **8. Query & Search:** Accepts search queries, runs the pipeline, and returns ranked results.
+* **9. Similarity Deep Dive:** Explains the step-by-step mechanical arithmetic behind **Cosine Similarity**.
+* **10. Semantic Map:** Connects individual word embeddings directly back to core database concepts.
+
+### 🛠️ Technical Implementation Details
+* **Tokenizer Simulation:** Replicates deterministic subword splitting (`playing` ➔ `play` + `##ing`) via an explicit internal vocabulary mapping array.
+* **Vector Engine:** Processes multi-dimensional matrices natively in JavaScript using deterministic pseudo-random seeds.
+* **Dimensionality Reduction:** Implements a localized power-iteration version of Principal Component Analysis (**PCA**) to dynamically render high-dimensional vector distributions onto an HTML5 Canvas coordinate plane.
+
 ## Backend concepts explained
 
 This project is useful for understanding the following concepts:
